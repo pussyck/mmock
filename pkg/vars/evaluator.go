@@ -37,6 +37,9 @@ func (fp ResponseMessageEvaluator) Eval(req *mock.Request, m *mock.Definition) {
 	holders = fp.walkAndGet(m.Response.HTTPEntity)
 	holders = append(holders, fp.walkAndGet(m.Callback.HTTPEntity)...)
 
+	fp.extractVars(m.Control.ProxyBaseURL, &holders)
+	fp.extractVars(m.Control.WebHookURL, &holders)
+
 	//fill holders with the correct values
 	vars = requestFiller.Fill(holders)
 	fp.mergeVars(vars, fakeFiller.Fill(holders))
@@ -44,6 +47,9 @@ func (fp ResponseMessageEvaluator) Eval(req *mock.Request, m *mock.Definition) {
 	//replace the holders in the response and the callback
 	fp.walkAndFill(&m.Response.HTTPEntity, vars)
 	fp.walkAndFill(&m.Callback.HTTPEntity, vars)
+
+	m.Control.ProxyBaseURL = fp.replaceVars(m.Control.ProxyBaseURL, vars)
+	m.Control.WebHookURL = fp.replaceVars(m.Control.WebHookURL, vars)
 }
 
 func (fp ResponseMessageEvaluator) walkAndGet(res mock.HTTPEntity) []string {

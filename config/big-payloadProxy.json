@@ -1,0 +1,13 @@
+{
+	"description": "Returns a big payload from a file",
+	"request": {
+		"method": "GET",
+		"path": "/proxy/*param"
+	},
+	"response": {
+		"statusCode": 200
+	},
+	"control": {
+		"proxyBaseURL":"http://localhost:8083/{{request.path.param}}"
+	}
+}
