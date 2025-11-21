@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
 )
 
 // HTTP is and adaptor beteewn the http and mock config.
@@ -40,7 +43,14 @@ func (t HTTP) BuildRequestDefinitionFromHTTP(req *http.Request) Request {
 	}
 
 	body, _ := ioutil.ReadAll(req.Body)
-	res.Body = string(body)
+	contentType := req.Header.Get("Content-Type")
+	encoding, _, _ := charset.DetermineEncoding(body, contentType)
+	decodedBody, _, err := transform.Bytes(encoding.NewDecoder(), body)
+	if err != nil {
+		res.Body = string(body)
+	} else {
+		res.Body = string(decodedBody)
+	}
 
 	return res
 }

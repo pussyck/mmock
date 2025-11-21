@@ -59,3 +59,19 @@ func TestBuildRequestDefinitionFromHTTP(t *testing.T) {
 	}
 
 }
+
+func TestBuildRequestDefinitionFromHTTPWithEncoding(t *testing.T) {
+	// "привет" in Windows-1251
+	bodyBytes := []byte{0xef, 0xf0, 0xe8, 0xe2, 0xe5, 0xf2}
+	b := bytes.NewBuffer(bodyBytes)
+	req, _ := http.NewRequest("POST", "http://domain.tld/test", b)
+	req.Header.Set("Content-Type", "text/plain; charset=windows-1251")
+
+	tr := HTTP{}
+	def := tr.BuildRequestDefinitionFromHTTP(req)
+
+	expectedBody := "привет"
+	if def.Body != expectedBody {
+		t.Errorf("Expected body '%s', got '%s'", expectedBody, def.Body)
+	}
+}
