@@ -8,6 +8,7 @@ import { Layout } from "./components/Layout";
 import Index from "./pages/Index";
 import RequestMemory from "./pages/RequestMemory";
 import MockMappings from "./pages/MockMappings";
+import StubFiles from "./pages/StubFiles";
 import Scenarios from "./pages/Scenarios";
 import Settings from "./pages/Settings";
 import About from "./pages/About";
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/memory" element={<RequestMemory />} />
               <Route path="/mappings" element={<MockMappings />} />
+              <Route path="/stubs" element={<StubFiles />} />
               <Route path="/scenarios" element={<Scenarios />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/about" element={<About />} />

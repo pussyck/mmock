@@ -90,6 +90,18 @@ export interface Scenarios {
   [scenarioName: string]: string;
 }
 
+export interface StubFile {
+  path: string;
+  size: number;
+  isMock: boolean;
+  valid: boolean;
+}
+
+export interface StubContent {
+  path: string;
+  content: string;
+}
+
 // API Functions
 const fetchApi = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
   const baseUrl = getBaseUrl();
@@ -140,6 +152,18 @@ export const mappingApi = {
   delete: (path: string) =>
     fetchApi<void>(`/api/mapping/${encodeURIComponent(path)}`, {
       method: 'DELETE',
+    }),
+};
+
+// Stub / Config Files
+export const stubApi = {
+  getAll: () => fetchApi<StubFile[]>('/api/stubs'),
+  getContent: (path: string) =>
+    fetchApi<StubContent>(`/api/stubs/${path}`),
+  updateContent: (path: string, content: string) =>
+    fetchApi<StubContent>(`/api/stubs/${path}`, {
+      method: 'PUT',
+      body: JSON.stringify({ path, content }),
     }),
 };
 

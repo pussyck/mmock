@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -34,6 +36,20 @@ type ActionResponse struct {
 	Result string `json:"result"`
 }
 
+// StubFile represents a file under the mocks config directory.
+type StubFile struct {
+	Path   string `json:"path"`
+	Size   int64  `json:"size"`
+	IsMock bool   `json:"isMock"`
+	Valid  bool   `json:"valid"`
+}
+
+// StubContent represents the contents of a stub/config file.
+type StubContent struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
 // Dispatcher is the http console server.
 type Dispatcher struct {
 	IP             string
@@ -42,6 +58,7 @@ type Dispatcher struct {
 	MatchSpy       match.TransactionSpier
 	Scenario       match.ScenearioStorer
 	Mapping        config.Mapping
+	ConfigPath     string
 	Mlog           chan match.Transaction
 	clients        []*websocket.Conn
 }
@@ -111,7 +128,17 @@ func (di *Dispatcher) Start() {
 	e.PUT("/api/mapping/*", di.mappingUpdateHandler)
 	e.DELETE("/api/mapping/*", di.mappingDeleteHandler)
 
+	// stub/config files (raw files from config folder)
+	e.GET("/api/stubs", di.stubListHandler)
+	e.GET("/api/stubs/*", di.stubContentHandler)
+	e.PUT("/api/stubs/*", di.stubUpdateHandler)
+
 	//POST api/mapping (all)
+
+	// Catch-all route for SPA - must be after all other routes
+	// This allows React Router to handle client-side routing
+	// All non-API, non-static routes will return index.html
+	e.GET("/*", di.consoleHandler)
 
 	go di.logFanOut()
 
@@ -141,6 +168,11 @@ func (di *Dispatcher) webSocketHandler(c echo.Context) error {
 
 func (di *Dispatcher) getMappingUri(path string) string {
 	root := "/api/mapping/"
+	return strings.TrimPrefix(path, root)
+}
+
+func (di *Dispatcher) getStubPath(path string) string {
+	root := "/api/stubs/"
 	return strings.TrimPrefix(path, root)
 }
 
@@ -185,6 +217,203 @@ func (di *Dispatcher) mappingDeleteHandler(c echo.Context) (err error) {
 	}
 	return c.JSON(http.StatusOK, ar)
 
+}
+
+// stubListHandler returns a flat list of all files under the configured mocks
+// directory. Paths are relative to the config root and always use forward slashes.
+func (di *Dispatcher) stubListHandler(c echo.Context) error {
+	if di.ConfigPath == "" {
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "config_path_not_configured",
+		})
+	}
+
+	var files []StubFile
+
+	err := filepath.Walk(di.ConfigPath, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		rel, err := filepath.Rel(di.ConfigPath, filePath)
+		if err != nil {
+			return err
+		}
+
+		rel = filepath.ToSlash(rel)
+
+		ext := strings.ToUpper(filepath.Ext(filePath))
+		isMock := ext == ".JSON" || ext == ".YAML" || ext == ".YML"
+
+		isValid := false
+		if isMock {
+			// Mapping contains only successfully loaded (валидные) mock-конфиги.
+			if _, ok := di.Mapping.Get(rel); ok {
+				isValid = true
+			}
+		}
+
+		// We only return files that failed validation (invalid mocks or non-mock files).
+		if !isValid {
+			files = append(files, StubFile{
+				Path:   rel,
+				Size:   info.Size(),
+				IsMock: isMock,
+				Valid:  isValid,
+			})
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		log.Errorf("Error listing stub files: %v", err)
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "error_listing_stubs",
+		})
+	}
+
+	return c.JSON(http.StatusOK, files)
+}
+
+// stubContentHandler returns the raw contents of a file under the config
+// directory, identified by its relative path.
+func (di *Dispatcher) stubContentHandler(c echo.Context) error {
+	if di.ConfigPath == "" {
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "config_path_not_configured",
+		})
+	}
+
+	relPath := di.getStubPath(c.Request().URL.Path)
+	if relPath == "" {
+		return c.JSON(http.StatusBadRequest, &ActionResponse{
+			Result: "missing_path",
+		})
+	}
+
+	// Clean and resolve to an absolute path under the config root
+	cleanRel := filepath.Clean(relPath)
+	fullPath := filepath.Join(di.ConfigPath, cleanRel)
+	absFullPath, err := filepath.Abs(fullPath)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, &ActionResponse{
+			Result: "invalid_path",
+		})
+	}
+
+	absConfig, err := filepath.Abs(di.ConfigPath)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "invalid_config_path",
+		})
+	}
+
+	if !strings.HasPrefix(absFullPath, absConfig) {
+		return c.JSON(http.StatusBadRequest, &ActionResponse{
+			Result: "path_outside_config",
+		})
+	}
+
+	content, err := os.ReadFile(absFullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return c.JSON(http.StatusNotFound, &ActionResponse{
+				Result: "not_found",
+			})
+		}
+
+		log.Errorf("Error reading stub file %s: %v", absFullPath, err)
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "error_reading_file",
+		})
+	}
+
+	resp := StubContent{
+		Path:    filepath.ToSlash(cleanRel),
+		Content: string(content),
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// stubUpdateHandler updates the raw contents of a file under the config
+// directory, identified by its relative path.
+func (di *Dispatcher) stubUpdateHandler(c echo.Context) error {
+	if di.ConfigPath == "" {
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "config_path_not_configured",
+		})
+	}
+
+	relPath := di.getStubPath(c.Request().URL.Path)
+	if relPath == "" {
+		return c.JSON(http.StatusBadRequest, &ActionResponse{
+			Result: "missing_path",
+		})
+	}
+
+	// Clean and resolve to an absolute path under the config root
+	cleanRel := filepath.Clean(relPath)
+	fullPath := filepath.Join(di.ConfigPath, cleanRel)
+	absFullPath, err := filepath.Abs(fullPath)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, &ActionResponse{
+			Result: "invalid_path",
+		})
+	}
+
+	absConfig, err := filepath.Abs(di.ConfigPath)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "invalid_config_path",
+		})
+	}
+
+	if !strings.HasPrefix(absFullPath, absConfig) {
+		return c.JSON(http.StatusBadRequest, &ActionResponse{
+			Result: "path_outside_config",
+		})
+	}
+
+	content, err := os.ReadFile(absFullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return c.JSON(http.StatusNotFound, &ActionResponse{
+				Result: "not_found",
+			})
+		}
+
+		log.Errorf("Error reading stub file %s: %v", absFullPath, err)
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "error_reading_file",
+		})
+	}
+
+	payload := StubContent{}
+	if err := c.Bind(&payload); err != nil {
+		return c.JSON(http.StatusBadRequest, &ActionResponse{
+			Result: "invalid_payload",
+		})
+	}
+
+	if err := os.WriteFile(absFullPath, []byte(payload.Content), 0644); err != nil {
+		log.Errorf("Error writing stub file %s: %v", absFullPath, err)
+		return c.JSON(http.StatusInternalServerError, &ActionResponse{
+			Result: "error_reading_file",
+		})
+	}
+
+	resp := StubContent{
+		Path:    filepath.ToSlash(cleanRel),
+		Content: string(content),
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }
 
 func (di *Dispatcher) mappingCreateHandler(c echo.Context) (err error) {

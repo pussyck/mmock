@@ -121,28 +121,29 @@ func getVarsProcessor() *vars.ResponseMessageEvaluator {
 
 func startServer(ip string, port, portTLS int, configTLS, tlsKeyPassword string, done chan struct{}, router server.RequestResolver, mLog chan match.Transaction, scenario match.ScenearioStorer, varsProcessor vars.Evaluator, spier match.TransactionSpier) {
 	dispatcher := server.Dispatcher{
-		IP:            ip,
-		Port:          port,
-		PortTLS:       portTLS,
-		ConfigTLS:     configTLS,
+		IP:             ip,
+		Port:           port,
+		PortTLS:        portTLS,
+		ConfigTLS:      configTLS,
 		TLSKeyPassword: tlsKeyPassword,
-		Resolver:      router,
-		Translator:    mock.HTTP{},
-		Evaluator:     varsProcessor,
-		Scenario:      scenario,
-		Spier:         spier,
-		Mlog:          mLog,
+		Resolver:       router,
+		Translator:     mock.HTTP{},
+		Evaluator:      varsProcessor,
+		Scenario:       scenario,
+		Spier:          spier,
+		Mlog:           mLog,
 	}
 	dispatcher.Start()
 	done <- struct{}{}
 }
-func startConsole(ip string, port int, resultsPerPage int, spy match.TransactionSpier, scenario match.ScenearioStorer, mapping config.Mapping, done chan struct{}, mLog chan match.Transaction) {
+func startConsole(ip string, port int, resultsPerPage int, spy match.TransactionSpier, scenario match.ScenearioStorer, mapping config.Mapping, configPath string, done chan struct{}, mLog chan match.Transaction) {
 	dispatcher := console.Dispatcher{
 		IP:             ip,
 		Port:           port,
 		MatchSpy:       spy,
 		Scenario:       scenario,
 		Mapping:        mapping,
+		ConfigPath:     configPath,
 		Mlog:           mLog,
 		ResultsPerPage: resultsPerPage,
 	}
@@ -210,7 +211,7 @@ func main() {
 	log.Infof("HTTP Server running at http://%s:%d\n", *sIP, *sPort)
 	log.Infof("HTTPS Server running at https://%s:%d\n", *sIP, *sPortTLS)
 	if *console {
-		go startConsole(*cIP, *cPort, *cResultsPerPage, spy, scenario, mapping, done, mLog)
+		go startConsole(*cIP, *cPort, *cResultsPerPage, spy, scenario, mapping, *cPath, done, mLog)
 		log.Infof("Console running at http://%s:%d\n", *cIP, *cPort)
 	}
 

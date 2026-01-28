@@ -1,4 +1,4 @@
-import { Activity, Database, FileJson, GitBranch, Info, Settings } from 'lucide-react';
+import { Activity, Database, FileJson, FileText, GitBranch, Info, Settings } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
@@ -31,6 +31,12 @@ const mainNavItems = [
     url: '/mappings',
     icon: FileJson,
     description: 'Manage mock definitions',
+  },
+  {
+    title: 'Stub Files',
+    url: '/stubs',
+    icon: FileText,
+    description: 'View raw config files',
   },
   {
     title: 'Scenarios',

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Search, RefreshCw, Trash2, Edit, FileJson } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Search, RefreshCw, Trash2, Edit, FileJson, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ export default function MockMappings() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingMock, setEditingMock] = useState<MockDefinition | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
 
   const fetchMappings = async () => {
     setLoading(true);
@@ -97,6 +98,23 @@ export default function MockMappings() {
       console.error(error);
     }
   };
+
+  const groupedMappings = useMemo(() => {
+    const groups: Record<string, MockDefinition[]> = {};
+
+    for (const mock of filteredMappings) {
+      const uri = mock.URI || "";
+      const lastSlash = uri.lastIndexOf("/");
+      const folder = lastSlash > 0 ? uri.slice(0, lastSlash) : "/";
+
+      if (!groups[folder]) {
+        groups[folder] = [];
+      }
+      groups[folder].push(mock);
+    }
+
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredMappings]);
 
   return (
     <div className="flex flex-col h-full">
@@ -173,52 +191,92 @@ export default function MockMappings() {
             )}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredMappings.map((mock) => (
-              <Card key={mock.URI} className="hover:border-primary/50 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-mono text-sm font-medium truncate" title={mock.URI}>
-                        {mock.URI}
-                      </h3>
-                      {mock.description && (
-                        <p className="text-sm text-muted-foreground truncate mt-1">{mock.description}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(mock)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteTarget(mock.URI)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+          <div className="space-y-6">
+            {groupedMappings.map(([folder, mocks]) => (
+              <div key={folder}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOpenFolders((prev) => ({
+                      ...prev,
+                      [folder]: !(prev[folder] ?? true),
+                    }))
+                  }
+                  className="w-full flex items-center justify-between mb-2 hover:bg-muted/60 px-2 py-1 rounded-md transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${
+                        openFolders[folder] ?? true ? "rotate-0" : "-rotate-90"
+                      }`}
+                    />
+                    <h2 className="text-sm font-semibold text-muted-foreground">
+                      {folder === "/" ? "Root" : folder}
+                    </h2>
                   </div>
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {mocks.length} mocks
+                  </Badge>
+                </button>
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <MethodBadge method={mock.request.method} />
-                    <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
-                      {mock.request.path}
-                    </code>
-                  </div>
+                {(openFolders[folder] ?? true) && (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {mocks.map((mock) => (
+                      <Card key={mock.URI} className="hover:border-primary/50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-mono text-sm font-medium truncate" title={mock.URI}>
+                                {mock.URI}
+                              </h3>
+                              {mock.description && (
+                                <p className="text-sm text-muted-foreground truncate mt-1">
+                                  {mock.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEdit(mock)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setDeleteTarget(mock.URI)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
 
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-                    <span className="text-xs text-muted-foreground">Response:</span>
-                    <StatusBadge statusCode={mock.response.statusCode} />
-                    {mock.control?.delay && (
-                      <Badge variant="outline" className="text-xs">
-                        Delay: {mock.control.delay}
-                      </Badge>
-                    )}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <MethodBadge method={mock.request.method} />
+                            <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
+                              {mock.request.path}
+                            </code>
+                          </div>
+
+                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+                            <span className="text-xs text-muted-foreground">Response:</span>
+                            <StatusBadge statusCode={mock.response.statusCode} />
+                            {mock.control?.delay && (
+                              <Badge variant="outline" className="text-xs">
+                                Delay: {mock.control.delay}
+                              </Badge>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </div>
             ))}
           </div>
         )}
