@@ -1,9 +1,6 @@
 package server
 
 import (
-	"bytes"
-	"encoding/gob"
-
 	"github.com/jmartin82/mmock/v3/internal/config"
 	"github.com/jmartin82/mmock/v3/pkg/match"
 	"github.com/jmartin82/mmock/v3/pkg/mock"
@@ -29,18 +26,7 @@ type Router struct {
 }
 
 func (rr *Router) copy(src, dst *mock.Definition) {
-	var mod bytes.Buffer
-	enc := gob.NewEncoder(&mod)
-	dec := gob.NewDecoder(&mod)
-	err := enc.Encode(src)
-	if err != nil {
-		log.Fatal("encode error:", err)
-	}
-	err = dec.Decode(dst)
-	if err != nil {
-		log.Fatal("decode error:", err)
-	}
-
+	*dst = cloneDefinition(*src)
 }
 
 // Route checks the request with all available mock definitions and return the matching mock for it.
@@ -70,4 +56,62 @@ func (rr *Router) Resolve(req *mock.Request) (*mock.Definition, *match.Result) {
 
 func getNotFoundResult() *mock.Definition {
 	return &mock.Definition{Response: mock.Response{StatusCode: 404}}
+}
+
+func cloneDefinition(src mock.Definition) mock.Definition {
+	src.Request = cloneRequest(src.Request)
+	src.Response = cloneResponse(src.Response)
+	src.Callback = cloneCallback(src.Callback)
+	src.Control.Scenario.RequiredState = cloneStringSlice(src.Control.Scenario.RequiredState)
+	return src
+}
+
+func cloneRequest(src mock.Request) mock.Request {
+	src.Headers = cloneValues(src.Headers)
+	src.Cookies = cloneCookies(src.Cookies)
+	src.QueryStringParameters = cloneValues(src.QueryStringParameters)
+	return src
+}
+
+func cloneResponse(src mock.Response) mock.Response {
+	src.Headers = cloneValues(src.Headers)
+	src.Cookies = cloneCookies(src.Cookies)
+	return src
+}
+
+func cloneCallback(src mock.Callback) mock.Callback {
+	src.Headers = cloneValues(src.Headers)
+	src.Cookies = cloneCookies(src.Cookies)
+	return src
+}
+
+func cloneValues(src mock.Values) mock.Values {
+	if src == nil {
+		return nil
+	}
+	dst := make(mock.Values, len(src))
+	for key, values := range src {
+		dst[key] = cloneStringSlice(values)
+	}
+	return dst
+}
+
+func cloneCookies(src mock.Cookies) mock.Cookies {
+	if src == nil {
+		return nil
+	}
+	dst := make(mock.Cookies, len(src))
+	for key, value := range src {
+		dst[key] = value
+	}
+	return dst
+}
+
+func cloneStringSlice(src []string) []string {
+	if src == nil {
+		return nil
+	}
+	dst := make([]string, len(src))
+	copy(dst, src)
+	return dst
 }

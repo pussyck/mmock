@@ -82,3 +82,57 @@ func TestInvalidRoute(t *testing.T) {
 	}
 
 }
+
+func TestResolveReturnsIndependentMock(t *testing.T) {
+	mocks := []mock.Definition{
+		{
+			URI: "test",
+			Request: mock.Request{
+				HTTPEntity: mock.HTTPEntity{
+					HttpHeaders: mock.HttpHeaders{
+						Headers: mock.Values{"X-Test": {"request"}},
+					},
+				},
+			},
+			Response: mock.Response{
+				StatusCode: 200,
+				HTTPEntity: mock.HTTPEntity{
+					HttpHeaders: mock.HttpHeaders{
+						Headers: mock.Values{"X-Test": {"response"}},
+						Cookies: mock.Cookies{"session": "original"},
+					},
+				},
+			},
+			Callback: mock.Callback{
+				HTTPEntity: mock.HTTPEntity{
+					HttpHeaders: mock.HttpHeaders{
+						Headers: mock.Values{"X-Callback": {"callback"}},
+					},
+				},
+			},
+			Control: mock.Control{
+				Scenario: mock.Scenario{
+					RequiredState: []string{"started"},
+				},
+			},
+		},
+	}
+
+	dummyMapper := DummyMapper{mocks: mocks}
+	dummyMatcher := DummyMatcher{OK: true}
+	r := NewRouter(dummyMapper, dummyMatcher)
+
+	resolved, _ := r.Resolve(&mock.Request{Path: "/test"})
+	resolved.Response.Headers["X-Test"][0] = "changed"
+	resolved.Response.Cookies["session"] = "changed"
+	resolved.Callback.Headers["X-Callback"][0] = "changed"
+	resolved.Control.Scenario.RequiredState[0] = "changed"
+
+	original := mocks[0]
+	if original.Response.Headers["X-Test"][0] != "response" ||
+		original.Response.Cookies["session"] != "original" ||
+		original.Callback.Headers["X-Callback"][0] != "callback" ||
+		original.Control.Scenario.RequiredState[0] != "started" {
+		t.Fatalf("resolved mock should not share mutable data with mapping")
+	}
+}

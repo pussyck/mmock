@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/jmartin82/mmock/v3/internal/config/logger"
 	"github.com/jmartin82/mmock/v3/pkg/match/payload"
@@ -20,6 +21,8 @@ var (
 	ErrScenarioNotMatch = errors.New("Scenario state not match")
 	ErrPathNotMatch     = errors.New("Path not match")
 )
+
+var routeCache sync.Map
 
 func NewTester(comparator *payload.Comparator, scenario ScenearioStorer) *Request {
 	return &Request{scenario: scenario, comparator: comparator}
@@ -153,6 +156,16 @@ func (mm Request) mockIncludesMethod(method string, mock *mock.Request) bool {
 	return false
 }
 
+func cachedRoute(pattern string) *route.Route {
+	if cached, ok := routeCache.Load(pattern); ok {
+		return cached.(*route.Route)
+	}
+
+	compiled := route.NewRoute(pattern)
+	actual, _ := routeCache.LoadOrStore(pattern, compiled)
+	return actual.(*route.Route)
+}
+
 func (mm Request) matchScenarioState(scenario *mock.Scenario) bool {
 	if scenario.Name == "" {
 		return true
@@ -175,8 +188,6 @@ type Matcher interface {
 
 func (mm Request) Match(req *mock.Request, mock *mock.Definition, scenarioAware bool) (bool, error) {
 
-	route := route.NewRoute(mock.Request.Path)
-
 	if !mm.matchOnEqualsOrIfEmptyOrGlob(req.Host, mock.Request.Host) {
 		return false, fmt.Errorf("Host not match. Actual: %s, Expected: %s", req.Host, mock.Request.Host)
 	}
@@ -189,8 +200,11 @@ func (mm Request) Match(req *mock.Request, mock *mock.Definition, scenarioAware 
 		return false, fmt.Errorf("Fragment not match. Actual: %s, Expected: %s", req.Fragment, mock.Request.Fragment)
 	}
 
-	if !glob.Glob(mock.Request.Path, req.Path) && route.Match(req.Path) == nil {
-		return false, fmt.Errorf("%w Actual: %s, Expected: %s", ErrPathNotMatch, req.Path, mock.Request.Path)
+	if !glob.Glob(mock.Request.Path, req.Path) {
+		route := cachedRoute(mock.Request.Path)
+		if route.Match(req.Path) == nil {
+			return false, fmt.Errorf("%w Actual: %s, Expected: %s", ErrPathNotMatch, req.Path, mock.Request.Path)
+		}
 	}
 
 	if !mm.mockIncludesMethod(req.Method, &mock.Request) {

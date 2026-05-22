@@ -50,6 +50,42 @@ type StubContent struct {
 	Content string `json:"content"`
 }
 
+func writeFileAtomic(filename string, content []byte, perm fs.FileMode) error {
+	tmpFile, err := os.CreateTemp(filepath.Dir(filename), ".mmock-stub-*")
+	if err != nil {
+		return err
+	}
+
+	tmpName := tmpFile.Name()
+	keepTemp := true
+	defer func() {
+		if keepTemp {
+			os.Remove(tmpName)
+		}
+	}()
+
+	if _, err := tmpFile.Write(content); err != nil {
+		tmpFile.Close()
+		return err
+	}
+
+	if err := tmpFile.Chmod(perm); err != nil {
+		tmpFile.Close()
+		return err
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return err
+	}
+
+	if err := os.Rename(tmpName, filename); err != nil {
+		return err
+	}
+
+	keepTemp = false
+	return nil
+}
+
 // Dispatcher is the http console server.
 type Dispatcher struct {
 	IP             string
@@ -381,15 +417,14 @@ func (di *Dispatcher) stubUpdateHandler(c echo.Context) error {
 		})
 	}
 
-	content, err := os.ReadFile(absFullPath)
-	if err != nil {
+	if _, err := os.Stat(absFullPath); err != nil {
 		if os.IsNotExist(err) {
 			return c.JSON(http.StatusNotFound, &ActionResponse{
 				Result: "not_found",
 			})
 		}
 
-		log.Errorf("Error reading stub file %s: %v", absFullPath, err)
+		log.Errorf("Error checking stub file %s: %v", absFullPath, err)
 		return c.JSON(http.StatusInternalServerError, &ActionResponse{
 			Result: "error_reading_file",
 		})
@@ -402,7 +437,7 @@ func (di *Dispatcher) stubUpdateHandler(c echo.Context) error {
 		})
 	}
 
-	if err := os.WriteFile(absFullPath, []byte(payload.Content), 0644); err != nil {
+	if err := writeFileAtomic(absFullPath, []byte(payload.Content), 0644); err != nil {
 		log.Errorf("Error writing stub file %s: %v", absFullPath, err)
 		return c.JSON(http.StatusInternalServerError, &ActionResponse{
 			Result: "error_reading_file",
@@ -411,7 +446,7 @@ func (di *Dispatcher) stubUpdateHandler(c echo.Context) error {
 
 	resp := StubContent{
 		Path:    filepath.ToSlash(cleanRel),
-		Content: string(content),
+		Content: payload.Content,
 	}
 
 	return c.JSON(http.StatusOK, resp)

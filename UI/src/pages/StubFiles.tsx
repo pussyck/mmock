@@ -196,7 +196,7 @@ export default function StubFiles() {
                     onClick={() =>
                       setOpenFolders((prev) => ({
                         ...prev,
-                        [folder]: !(prev[folder] ?? true),
+                        [folder]: !(prev[folder] ?? false),
                       }))
                     }
                     className="w-full flex items-center justify-between mb-2 hover:bg-muted/60 px-2 py-1 rounded-md transition-colors"

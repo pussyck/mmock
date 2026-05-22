@@ -142,4 +142,10 @@ func TestGetSortedMappingList(t *testing.T) {
 		t.Errorf("Invalid priority sort")
 	}
 
+	mocks[0].URI = "changed"
+	mocks = n.List()
+	if mocks[0].URI != "test3" {
+		t.Errorf("List should return a copy of the sorted mapping")
+	}
+
 }
