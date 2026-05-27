@@ -29,6 +29,13 @@ func (w *ResponseWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
+// WriteHeader removes Content-Length after mock headers are applied because the
+// compressed body length will differ from the configured response body length.
+func (w *ResponseWriter) WriteHeader(statusCode int) {
+	w.Header().Del("Content-Length")
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
 // Close flushes gzip stream
 func (w *ResponseWriter) Close() error {
 	return w.gzipWriter.Close()
