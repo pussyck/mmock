@@ -3,7 +3,7 @@ package server
 import (
 	"bytes"
 	"compress/gzip"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -126,7 +126,7 @@ func TestDispatcherGzipJSON(t *testing.T) {
 	}
 	defer reader.Close()
 
-	body, _ := ioutil.ReadAll(reader)
+	body, _ := io.ReadAll(reader)
 	if string(body) != response.Body {
 		t.Errorf("Got %s, want %s", body, response.Body)
 	}
@@ -386,7 +386,7 @@ func TestDispatcherGzipTextHTML(t *testing.T) {
 	}
 	defer reader.Close()
 
-	body, _ := ioutil.ReadAll(reader)
+	body, _ := io.ReadAll(reader)
 	if string(body) != response.Body {
 		t.Errorf("Got %s, want %s", body, response.Body)
 	}
@@ -434,7 +434,7 @@ func TestDispatcherGzipDeflateEncoding(t *testing.T) {
 	}
 	defer reader.Close()
 
-	body, _ := ioutil.ReadAll(reader)
+	body, _ := io.ReadAll(reader)
 	if string(body) != response.Body {
 		t.Errorf("Decompressed body mismatch")
 	}

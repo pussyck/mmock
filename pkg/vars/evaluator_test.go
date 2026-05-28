@@ -2,7 +2,6 @@ package vars
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -606,13 +605,13 @@ func TestReplaceTagsCallback(t *testing.T) {
 
 func TestReplaceBigFile(t *testing.T) {
 	content := []byte("{{request.body}} this is a big file with holders replaced")
-	dir, err := ioutil.TempDir("", "mmock")
+	dir, err := os.MkdirTemp("", "mmock")
 	if err != nil {
 		t.Errorf("Error creating temporary folder")
 	}
 
 	tmpfn := filepath.Join(dir, "bigfile")
-	if err := ioutil.WriteFile(tmpfn, content, 0666); err != nil {
+	if err := os.WriteFile(tmpfn, content, 0666); err != nil {
 		t.Errorf("Error updating temporary file")
 	}
 

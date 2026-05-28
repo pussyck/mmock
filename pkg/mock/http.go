@@ -3,7 +3,6 @@ package mock
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -42,7 +41,7 @@ func (t HTTP) BuildRequestDefinitionFromHTTP(req *http.Request) Request {
 		res.QueryStringParameters[name] = values
 	}
 
-	body, _ := ioutil.ReadAll(req.Body)
+	body, _ := io.ReadAll(req.Body)
 	contentType := req.Header.Get("Content-Type")
 	encoding, _, _ := charset.DetermineEncoding(body, contentType)
 	decodedBody, _, err := transform.Bytes(encoding.NewDecoder(), body)

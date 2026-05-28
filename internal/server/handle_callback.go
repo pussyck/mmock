@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/jmartin82/mmock/v3/pkg/mock"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -41,7 +41,7 @@ func HandleCallback(cb mock.Callback) (*http.Response, error) {
 	}
 	statusCode := resp.StatusCode
 	if statusCode >= 400 {
-		body, errBody := ioutil.ReadAll(resp.Body)
+		body, errBody := io.ReadAll(resp.Body)
 		if errBody != nil {
 			// Can't read a body, just log the statusCode
 			err = fmt.Errorf("Unexpected HTTP response. Status code %d", statusCode)

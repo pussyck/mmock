@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +10,7 @@ import (
 func TestHotReplace(t *testing.T) {
 
 	content := []byte("temporary file's content")
-	dir, err := ioutil.TempDir("", "mmock2")
+	dir, err := os.MkdirTemp("", "mmock2")
 	if err != nil {
 		t.Errorf("Error creating temporary folder")
 	}
@@ -33,7 +32,7 @@ func TestHotReplace(t *testing.T) {
 
 	go func() {
 		time.Sleep(1 * time.Second)
-		if err := ioutil.WriteFile(tmpfn, content, 0666); err != nil {
+		if err := os.WriteFile(tmpfn, content, 0666); err != nil {
 			t.Errorf("Error updating temporary file")
 		}
 	}()

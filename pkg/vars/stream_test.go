@@ -2,7 +2,6 @@ package vars
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,13 +13,13 @@ import (
 func TestReadFile(t *testing.T) {
 
 	content := []byte("This is a big file")
-	dir, err := ioutil.TempDir("", "mmock")
+	dir, err := os.MkdirTemp("", "mmock")
 	if err != nil {
 		t.Errorf("Error creating temporary folder")
 	}
 
 	tmpfn := filepath.Join(dir, "bigfile")
-	if err := ioutil.WriteFile(tmpfn, content, 0666); err != nil {
+	if err := os.WriteFile(tmpfn, content, 0666); err != nil {
 		t.Errorf("Error updating temporary file")
 	}
 

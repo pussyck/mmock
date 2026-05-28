@@ -3,8 +3,9 @@ package vars
 import (
 	"fmt"
 	"github.com/jmartin82/mmock/v3/internal/config/logger"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -40,7 +41,7 @@ func (st Stream) getOutput(o []byte, err error) string {
 
 func (st Stream) getFileContents(tag string) ([]byte, error) {
 	path := st.getInputParam(tag)
-	return ioutil.ReadFile(path)
+	return os.ReadFile(path)
 }
 
 func (st Stream) getHttpContents(tag string) ([]byte, error) {
@@ -50,7 +51,7 @@ func (st Stream) getHttpContents(tag string) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	content, err := ioutil.ReadAll(resp.Body)
+	content, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

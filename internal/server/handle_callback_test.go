@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -51,12 +51,12 @@ func TestPost(t *testing.T) {
 	}
 
 	resp, err := HandleCallback(cb)
-	defer resp.Body.Close()
 	if err != nil {
 		t.Fatalf("Unexpected error from HandleCallback %s", err)
 	}
+	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if string(body) != postResponse {
 		t.Fatalf("Unexpected response body: %s", body)
 	}
@@ -73,12 +73,12 @@ func TestGet(t *testing.T) {
 	}
 
 	resp, err := HandleCallback(cb)
-	defer resp.Body.Close()
 	if err != nil {
 		t.Fatalf("Unexpected error from HandleCallback %s", err)
 	}
+	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if string(body) != getResponse {
 		t.Fatalf("Unexpected response body: %s", body)
 	}

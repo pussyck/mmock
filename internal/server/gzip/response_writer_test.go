@@ -3,7 +3,7 @@ package gzip
 import (
 	"bytes"
 	"compress/gzip"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -93,7 +93,7 @@ func TestGzipResponseWriter(t *testing.T) {
 	}
 	defer reader.Close()
 
-	decompressed, err := ioutil.ReadAll(reader)
+	decompressed, err := io.ReadAll(reader)
 	if err != nil {
 		t.Fatalf("Failed to decompress: %v", err)
 	}

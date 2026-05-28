@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +29,7 @@ func (jp DummyReader) Parse(buf []byte) (mock.Definition, error) {
 var fsUpdate = make(chan struct{})
 
 func TestMappingCrud(t *testing.T) {
-	dir, err := ioutil.TempDir("", "mmock_mapping")
+	dir, err := os.MkdirTemp("", "mmock_mapping")
 	if err != nil {
 		t.Errorf("Error creating temporary folder")
 	}
@@ -75,7 +74,7 @@ func TestMappingCrud(t *testing.T) {
 }
 
 func TestPopulate(t *testing.T) {
-	dir, err := ioutil.TempDir("", "mmock_mapping")
+	dir, err := os.MkdirTemp("", "mmock_mapping")
 	if err != nil {
 		t.Errorf("Error creating temporary folder")
 	}
@@ -93,11 +92,11 @@ func TestPopulate(t *testing.T) {
 	tmpfn := filepath.Join(dir, "tmpfile_populate")
 	tmpfnInvalid := filepath.Join(dir, "tmpfile_populate_invalid")
 
-	if err := ioutil.WriteFile(tmpfn, []byte(""), 0666); err != nil {
+	if err := os.WriteFile(tmpfn, []byte(""), 0666); err != nil {
 		t.Errorf("Error creating temporary file")
 	}
 
-	if err := ioutil.WriteFile(tmpfnInvalid, []byte("INVALID"), 0666); err != nil {
+	if err := os.WriteFile(tmpfnInvalid, []byte("INVALID"), 0666); err != nil {
 		t.Errorf("Error creating temporary file")
 	}
 
@@ -116,7 +115,7 @@ func TestPopulate(t *testing.T) {
 
 func TestGetSortedMappingList(t *testing.T) {
 
-	dir, err := ioutil.TempDir("", "mmock_mapping")
+	dir, err := os.MkdirTemp("", "mmock_mapping")
 	if err != nil {
 		t.Errorf("Error creating temporary folder")
 	}
@@ -151,7 +150,7 @@ func TestGetSortedMappingList(t *testing.T) {
 }
 
 func TestSortedMappingRefreshesAfterUpdateAndDelete(t *testing.T) {
-	dir, err := ioutil.TempDir("", "mmock_mapping")
+	dir, err := os.MkdirTemp("", "mmock_mapping")
 	if err != nil {
 		t.Errorf("Error creating temporary folder")
 	}

@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -243,13 +243,13 @@ func (di Dispatcher) loadKeyPair(certFile, keyFile string) (tls.Certificate, err
 	}
 
 	// Load certificate
-	certPEM, err := ioutil.ReadFile(certFile)
+	certPEM, err := os.ReadFile(certFile)
 	if err != nil {
 		return tls.Certificate{}, fmt.Errorf("failed to read certificate file '%s': %v", certFile, err)
 	}
 
 	// Load private key
-	keyPEM, err := ioutil.ReadFile(keyFile)
+	keyPEM, err := os.ReadFile(keyFile)
 	if err != nil {
 		return tls.Certificate{}, fmt.Errorf("failed to read private key file '%s': %v", keyFile, err)
 	}
@@ -310,7 +310,7 @@ func (di Dispatcher) listenAndServeTLS(addrTLS string) error {
 
 		if filepath.Base(crt) == "ca.crt" {
 			log.Info("Found ca cert", crt)
-			ca, err := ioutil.ReadFile(crt)
+			ca, err := os.ReadFile(crt)
 			if err != nil {
 				return fmt.Errorf("could not load CA Certificate '%s'", crt)
 			}
@@ -333,8 +333,6 @@ func (di Dispatcher) listenAndServeTLS(addrTLS string) error {
 		}
 		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
 	}
-	tlsConfig.BuildNameToCertificate()
-
 	server := http.Server{
 		Addr:      addrTLS,
 		TLSConfig: tlsConfig,

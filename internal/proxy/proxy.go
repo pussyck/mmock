@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"github.com/jmartin82/mmock/v3/internal/config/logger"
 	"github.com/jmartin82/mmock/v3/pkg/mock"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -62,7 +62,7 @@ func (pr *Proxy) MakeRequest(request *mock.Request) *mock.Response {
 		r.Cookies[cookie.Name] = cookie.Value
 	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	r.Body = string(body)
 	return r
 }

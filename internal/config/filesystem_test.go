@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,7 +34,7 @@ func (mr *mockParser) Parse(content []byte) (mock.Definition, error) {
 func TestReadMockDefinition(t *testing.T) {
 
 	content := []byte(MockContent)
-	dir, err := ioutil.TempDir("", "mmock")
+	dir, err := os.MkdirTemp("", "mmock")
 	if err != nil {
 		t.Error("Error creating temporary folder")
 	}
@@ -74,7 +73,7 @@ func TestReadMockDefinition(t *testing.T) {
 func TestWriteMockDefinition(t *testing.T) {
 
 	mock := mock.Definition{URI: "test"}
-	dir, err := ioutil.TempDir("", "mmock")
+	dir, err := os.MkdirTemp("", "mmock")
 	if err != nil {
 		t.Errorf("Error creating temporary folder")
 	}
@@ -86,7 +85,7 @@ func TestWriteMockDefinition(t *testing.T) {
 		t.Error("Unexpected error writing the config", err)
 	}
 
-	bytes, erf := ioutil.ReadFile(tmpfn)
+	bytes, erf := os.ReadFile(tmpfn)
 	if erf != nil || len(bytes) == 0 {
 		t.Error("Unexpected error reading the config ", erf)
 	}

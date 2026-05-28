@@ -3,7 +3,7 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 
@@ -56,7 +56,9 @@ func (fd *FSMapper) Write(filename string, mock mock.Definition) error {
 		return err
 	}
 
-	ioutil.WriteFile(filename, content, 0644)
+	if err := os.WriteFile(filename, content, 0644); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -64,7 +66,7 @@ func (fd *FSMapper) Write(filename string, mock mock.Definition) error {
 func (fd *FSMapper) Read(filename string) (mock.Definition, error) {
 	for _, parser := range fd.parsers {
 		if parser.CanParse(filename) {
-			buf, err := ioutil.ReadFile(filename)
+			buf, err := os.ReadFile(filename)
 			if err != nil {
 				log.Errorf("Invalid mock config in: %s\n", filename)
 				return mock.Definition{}, ErrInvalidMockDefinition

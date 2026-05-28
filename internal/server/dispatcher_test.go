@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -16,7 +15,7 @@ import (
 
 func TestLoadKeyPair_UnencryptedKey(t *testing.T) {
 	// Create temporary directory
-	tmpDir, err := ioutil.TempDir("", "mmock_tls_test")
+	tmpDir, err := os.MkdirTemp("", "mmock_tls_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -35,14 +34,14 @@ func TestLoadKeyPair_UnencryptedKey(t *testing.T) {
 
 func TestLoadKeyPair_EncryptedKey(t *testing.T) {
 	// Create temporary directory
-	tmpDir, err := ioutil.TempDir("", "mmock_tls_test")
+	tmpDir, err := os.MkdirTemp("", "mmock_tls_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
 	password := "testpassword123"
-	
+
 	// Generate test certificate and encrypted key
 	certFile, keyFile := generateTestCertificate(t, tmpDir, password)
 
@@ -87,11 +86,11 @@ func generateTestCertificate(t *testing.T, dir, password string) (certFile, keyF
 			StreetAddress: []string{""},
 			PostalCode:    []string{""},
 		},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(365 * 24 * time.Hour),
-		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IPAddresses:  nil,
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: nil,
 	}
 
 	// Create certificate
