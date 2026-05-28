@@ -149,3 +149,44 @@ func TestGetSortedMappingList(t *testing.T) {
 	}
 
 }
+
+func TestSortedMappingRefreshesAfterUpdateAndDelete(t *testing.T) {
+	dir, err := ioutil.TempDir("", "mmock_mapping")
+	if err != nil {
+		t.Errorf("Error creating temporary folder")
+	}
+	defer os.RemoveAll(dir)
+
+	cm := NewFileSystemMapper()
+	n := NewConfigMapping(dir, cm, fsUpdate)
+
+	if err := n.Set("low", mock.Definition{URI: "low", Control: mock.Control{Priority: 1}}); err != nil {
+		t.Fatalf("set low priority mapping: %v", err)
+	}
+	if err := n.Set("high", mock.Definition{URI: "high", Control: mock.Control{Priority: 10}}); err != nil {
+		t.Fatalf("set high priority mapping: %v", err)
+	}
+
+	mocks := n.List()
+	if len(mocks) != 2 || mocks[0].URI != "high" || mocks[1].URI != "low" {
+		t.Fatalf("initial sorted mappings = %#v", mocks)
+	}
+
+	if err := n.Set("low", mock.Definition{URI: "low", Control: mock.Control{Priority: 100}}); err != nil {
+		t.Fatalf("update low priority mapping: %v", err)
+	}
+
+	mocks = n.List()
+	if len(mocks) != 2 || mocks[0].URI != "low" || mocks[1].URI != "high" {
+		t.Fatalf("sorted mappings after update = %#v", mocks)
+	}
+
+	if err := n.Delete("low"); err != nil {
+		t.Fatalf("delete mapping: %v", err)
+	}
+
+	mocks = n.List()
+	if len(mocks) != 1 || mocks[0].URI != "high" {
+		t.Fatalf("sorted mappings after delete = %#v", mocks)
+	}
+}

@@ -94,6 +94,21 @@ func TestPathVars(t *testing.T) {
 	}
 }
 
+func TestPathVarsMatchRepeatedly(t *testing.T) {
+	req := mock.Request{}
+	req.Path = "/users/42/orders/7"
+
+	m := mock.Definition{}
+	m.Request.Path = "/users/:userID/orders/:orderID"
+
+	mm := Request{}
+	for i := 0; i < 5; i++ {
+		if b, err := mm.Match(&req, &m, true); !b {
+			t.Fatalf("route match failed on iteration %d: %v", i, err)
+		}
+	}
+}
+
 func TestPathGlob(t *testing.T) {
 	req := mock.Request{}
 	req.Path = "/a/b/c"

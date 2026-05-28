@@ -91,8 +91,10 @@ func TestResolveReturnsIndependentMock(t *testing.T) {
 				HTTPEntity: mock.HTTPEntity{
 					HttpHeaders: mock.HttpHeaders{
 						Headers: mock.Values{"X-Test": {"request"}},
+						Cookies: mock.Cookies{"request-cookie": "original"},
 					},
 				},
+				QueryStringParameters: mock.Values{"q": {"original"}},
 			},
 			Response: mock.Response{
 				StatusCode: 200,
@@ -123,13 +125,19 @@ func TestResolveReturnsIndependentMock(t *testing.T) {
 	r := NewRouter(dummyMapper, dummyMatcher)
 
 	resolved, _ := r.Resolve(&mock.Request{Path: "/test"})
+	resolved.Request.Headers["X-Test"][0] = "changed"
+	resolved.Request.Cookies["request-cookie"] = "changed"
+	resolved.Request.QueryStringParameters["q"][0] = "changed"
 	resolved.Response.Headers["X-Test"][0] = "changed"
 	resolved.Response.Cookies["session"] = "changed"
 	resolved.Callback.Headers["X-Callback"][0] = "changed"
 	resolved.Control.Scenario.RequiredState[0] = "changed"
 
 	original := mocks[0]
-	if original.Response.Headers["X-Test"][0] != "response" ||
+	if original.Request.Headers["X-Test"][0] != "request" ||
+		original.Request.Cookies["request-cookie"] != "original" ||
+		original.Request.QueryStringParameters["q"][0] != "original" ||
+		original.Response.Headers["X-Test"][0] != "response" ||
 		original.Response.Cookies["session"] != "original" ||
 		original.Callback.Headers["X-Callback"][0] != "callback" ||
 		original.Control.Scenario.RequiredState[0] != "started" {

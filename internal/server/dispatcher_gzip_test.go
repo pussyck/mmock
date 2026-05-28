@@ -254,6 +254,41 @@ func TestDispatcherNoGzipWithoutAcceptEncoding(t *testing.T) {
 	}
 }
 
+func TestDispatcherPreservesContentLengthWithoutGzip(t *testing.T) {
+	response := &mock.Response{
+		StatusCode: 200,
+		HTTPEntity: mock.HTTPEntity{
+			HttpHeaders: mock.HttpHeaders{
+				Headers: map[string][]string{
+					"Content-Type":   {"application/json"},
+					"Content-Length": {"24"},
+				},
+			},
+			Body: `{"message": "test data"}`,
+		},
+	}
+
+	dispatcher := &Dispatcher{
+		Translator: mockTranslator{},
+		Resolver:   &mockResolver{response: response},
+		Evaluator:  &mockEvaluator{},
+		Scenario:   &mockScenario{},
+		Spier:      &mockSpier{},
+		Mlog:       make(chan match.Transaction, 1),
+	}
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	recorder := httptest.NewRecorder()
+	dispatcher.ServeHTTP(recorder, req)
+
+	if recorder.Header().Get("Content-Encoding") == "gzip" {
+		t.Error("Response should not be compressed without Accept-Encoding")
+	}
+	if recorder.Header().Get("Content-Length") != "24" {
+		t.Errorf("Content-Length = %q, want %q", recorder.Header().Get("Content-Length"), "24")
+	}
+}
+
 func TestGetContentType(t *testing.T) {
 	tests := []struct {
 		name     string

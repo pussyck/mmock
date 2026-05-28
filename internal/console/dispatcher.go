@@ -86,6 +86,14 @@ func writeFileAtomic(filename string, content []byte, perm fs.FileMode) error {
 	return nil
 }
 
+func isPathUnderConfig(absPath, absConfig string) bool {
+	rel, err := filepath.Rel(absConfig, absPath)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)))
+}
+
 // Dispatcher is the http console server.
 type Dispatcher struct {
 	IP             string
@@ -350,7 +358,7 @@ func (di *Dispatcher) stubContentHandler(c echo.Context) error {
 		})
 	}
 
-	if !strings.HasPrefix(absFullPath, absConfig) {
+	if !isPathUnderConfig(absFullPath, absConfig) {
 		return c.JSON(http.StatusBadRequest, &ActionResponse{
 			Result: "path_outside_config",
 		})
@@ -411,7 +419,7 @@ func (di *Dispatcher) stubUpdateHandler(c echo.Context) error {
 		})
 	}
 
-	if !strings.HasPrefix(absFullPath, absConfig) {
+	if !isPathUnderConfig(absFullPath, absConfig) {
 		return c.JSON(http.StatusBadRequest, &ActionResponse{
 			Result: "path_outside_config",
 		})
